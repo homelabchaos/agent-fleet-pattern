@@ -84,6 +84,14 @@ allowed-tools: Bash, Read, Grep
 3. Read `docs/monitoring/OPEN-THREADS.md` — pull items tagged `monitoring`.
 4. Check the last 24h of fired alerts for anything that fired ≥3× (flapping candidate).
 
+## How to read the output
+- From step 1, only `Name`, `Enabled`, `Severity` matter. `Enabled: false` on a Sev0/1 rule
+  is a finding; on Sev3/4 it is usually intentional — report it, don't flag it.
+- From step 2, a group with zero receivers is DEGRADED regardless of anything else.
+- Normal for step 4 is 0–5 fires. One rule ≥3× is a flapping candidate, not an outage —
+  name it, don't investigate it here.
+- Ignore everything else the commands print. Do not paste raw tables into the report.
+
 ## Report (post this unprompted, ≤15 lines)
 - **State:** OK / DEGRADED (+ one line why)
 - **Fired last 24h:** count, top 3 by frequency
@@ -98,13 +106,16 @@ allowed-tools: Bash, Read, Grep
 
 What makes it good:
 
-1. **Numbered steps with the literal commands.** A skill that says "check the alerts" is a suggestion, not a skill.
-2. **A report template.** The output shape is the contract; it's what makes runs comparable week to week.
-3. **`disable-model-invocation: true` for anything with side effects or cost.** Let the human pull the trigger; let the model auto-load only reference-style skills.
-4. **`allowed-tools` fenced to what the steps need.**
-5. **"Don't fix during the brief."** Separate *observe* from *act* — the number-one way a helper turns into an incident.
+1. **Numbered steps with the literal commands.** A skill that says "check the alerts" is a suggestion, not a skill. Say which parameters the model may vary (time window, resource) and which it may not (auth, endpoint, filters).
+2. **A reading guide for the output.** Which fields matter, what "normal" looks like, what is a finding versus noise, what to ignore. This is the step most people skip, and it is where both the wrong answers and the token bills come from: a model handed raw output with no reading guide will narrate all of it. In a cost-constrained environment this section *is* the savings — the commands can pre-filter (a script that returns 20 rows instead of 4,000), and the guide keeps the model from re-expanding them.
+3. **A report template.** The output shape is the contract; it's what makes runs comparable week to week, and what lets the next consumer (a human, a router session) use it without re-reading the raw output.
+4. **`disable-model-invocation: true` for anything with side effects or cost.** Let the human pull the trigger; let the model auto-load only reference-style skills.
+5. **`allowed-tools` fenced to what the steps need.**
+6. **"Don't fix during the brief."** Separate *observe* from *act* — the number-one way a helper turns into an incident.
 
-Anti-patterns: a skill that's really a prompt ("be thorough"); no report shape; steps that depend on state the skill didn't check.
+Put differently, a skill has three parts: **what to run**, **what the output means**, and **what shape to hand back**. A script is only ever the first part. The test for whether something is a skill: could a competent person unfamiliar with the system follow it verbatim and produce the same 15-line report you would? If it needs judgment about *whether* to run, that judgment belongs in the agent; the skill is what the agent reaches for once it has decided.
+
+Anti-patterns: a skill that's really a prompt ("be thorough"); no report shape; no reading guide (raw output pasted into the report); steps that depend on state the skill didn't check.
 
 ---
 
